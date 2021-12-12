@@ -1,5 +1,6 @@
 package org.grigorovich.test_web_app.controllers;
 
+import org.grigorovich.test_web_app.model.Expense;
 import org.grigorovich.test_web_app.repository.ExpenseRepository;
 import org.grigorovich.test_web_app.repository.RepositoryFactory;
 
@@ -20,8 +21,12 @@ public class ExpenseDeleteController extends HttpServlet {
 
             try {
                 int id = Integer.parseInt(request.getParameter("id"));
-                repository.remove(id);
+                Expense expense = repository.find(id);
+                repository.remove(id, expense); //
                 response.sendRedirect(request.getContextPath() + "/expenses");
+                /*
+                выбрасывает на страницу notfound но все удаляет
+                 */
             } catch (Exception ex) {
                 getServletContext().getRequestDispatcher("/WEB-INF/view/notfound.jsp").forward(request, response);
             }

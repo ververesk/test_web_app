@@ -6,22 +6,26 @@ import org.grigorovich.test_web_app.model.Category;
 import org.grigorovich.test_web_app.model.Expense;
 
 import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.*;
 
 @Slf4j
 public class ExpenseRepositoryPostgres implements ExpenseRepository {
 
+    private static final String SELECT_FROM_EXPENSE =
+            "select e.id id, e.name name, e.created_at created_at, e.category category, e.amount amount from expense e";
     private static final String SELECT_FROM_EXPENSE_AND_CATEGORY =
             "select e.id e_id, e.name e_name, created_at, c.id c_id, c.name c_name, amount " +
                     "from expense e join category c on e.category = c.id";
     private static final String ONE_ENTITY_FILTER = " where e.id = ?";
-    private static final String FIND_EXPENSE_BY_ID = SELECT_FROM_EXPENSE_AND_CATEGORY + ONE_ENTITY_FILTER;
+    private static final String FIND_EXPENSE_BY_ID = SELECT_FROM_EXPENSE + ONE_ENTITY_FILTER;
     private static final String DELETE_EXPENSE_BY_ID = "delete from expense e" + ONE_ENTITY_FILTER;
-    private static final String INSERT_EXPENSE_SQL = "insert into expense (name, created_at, amount) values (?, ?, ?) returning id";
+    private static final String INSERT_EXPENSE_SQL = "insert into expense (name, created_at, category, amount) values (?, ?, ?, ?) returning id";
     private static final String UPDATE_EXPENSE_SQL = "update expense e set name = ?, created_at = ?, amount = ?" + ONE_ENTITY_FILTER;
 
 
@@ -44,12 +48,12 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
     }
 
     @Override
-    public List<Expense> findAll() {
+    public List<Expense> findAllExpenseJoinCategory() {
         List<Expense> result;
         try (Connection con = dataSource.getConnection();
              PreparedStatement ps = con.prepareStatement(SELECT_FROM_EXPENSE_AND_CATEGORY);
              ResultSet rs = ps.executeQuery()) {
-            result = resultSetToExpenses(rs);
+            result = resultSetToExpensesJoinCategory(rs);
         } catch (SQLException e) {
             log.error(e.getMessage());
             throw new DatabaseException(e);
@@ -57,7 +61,36 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
         return result;
     }
 
-    private List<Expense> resultSetToExpenses(ResultSet rs) throws SQLException {
+    @Override
+    public List<Expense> findAll() {
+        List<Expense> expenseList = new ArrayList<>();
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement ps = con.prepareStatement(SELECT_FROM_EXPENSE);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+                LocalDate created_at = rs.getDate("created_at").toLocalDate();
+                Integer categoryInt = rs.getInt("category");
+                BigDecimal amount = rs.getBigDecimal("amount");
+                Expense expense = new Expense();
+                expense.withId(id);
+                expense.withName(name);
+                expense.withCreated_at(created_at);
+                expense.withCategoryInt(categoryInt);
+                expense.withAmount(amount);
+                expenseList.add(expense);
+            }
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+            throw new DatabaseException(e);
+        }
+        return expenseList;
+    }
+
+
+
+    private List<Expense> resultSetToExpensesJoinCategory(ResultSet rs) throws SQLException {
         Map<Integer, Expense> expenseMap = new HashMap<>();
         Map<Integer, Category> categoryMap = new HashMap<>();
         while (rs.next()) {
@@ -65,8 +98,8 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
             int cId = rs.getInt("c_id");
 
             categoryMap.putIfAbsent(cId, new Category()
-                   .withId(cId)
-                   .withName(rs.getString("c_name")));
+                    .withId(cId)
+                    .withName(rs.getString("c_name")));
 
             expenseMap.putIfAbsent(eId,
                     new Expense()
@@ -80,31 +113,58 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
         return values.isEmpty() ? new ArrayList<>() : new ArrayList<>(values);
     }
 
-    private static <K, V> V putIfAbsentAndReturn(Map<K, V> map, K key, V value) {
-        if (key == null) {
-            return null;
-        }
-        map.putIfAbsent(key, value);
-        return map.get(key);
-    }
+//    private static <K, V> V putIfAbsentAndReturn(Map<K, V> map, K key, V value) {
+//        if (key == null) {
+//            return null;
+//        }
+//        map.putIfAbsent(key, value);
+//        return map.get(key);
+//    }
+
+//    @Override
+//    public Expense find(int id) {
+//        List<Expense> result;
+//        ResultSet rs = null;
+//        try (Connection con = dataSource.getConnection();
+//             PreparedStatement ps = con.prepareStatement(FIND_EXPENSE_BY_ID)) {
+//            ps.setInt(1, id);
+//            rs = ps.executeQuery();
+//            result = resultSetToExpenses(rs);
+//        } catch (SQLException e) {
+//            log.error(e.getMessage());
+//            throw new DatabaseException(e);
+//        } finally {
+//            closeQuietly(rs);
+//        }
+//        return result.get(0);
+//    }
 
     @Override
     public Expense find(int id) {
-        List<Expense> result;
         ResultSet rs = null;
         try (Connection con = dataSource.getConnection();
              PreparedStatement ps = con.prepareStatement(FIND_EXPENSE_BY_ID)) {
             ps.setInt(1, id);
             rs = ps.executeQuery();
-            result = resultSetToExpenses(rs);
+            while (rs.next()) {
+                int eId = rs.getInt("id");
+                String name = rs.getString("name");
+                LocalDate created_at = rs.getDate("created_at").toLocalDate();
+                Integer categoryInt = rs.getInt("category");
+                BigDecimal amount = rs.getBigDecimal("amount");
+                Expense expense = new Expense(eId, name, created_at, categoryInt, amount);
+                return expense;
+            }
         } catch (SQLException e) {
             log.error(e.getMessage());
+
             throw new DatabaseException(e);
         } finally {
             closeQuietly(rs);
         }
-        return result.get(0);
+        return null;
     }
+
 
     private static void closeQuietly(AutoCloseable closeable) {
         if (closeable == null) {
@@ -141,7 +201,8 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
              PreparedStatement ps = con.prepareStatement(INSERT_EXPENSE_SQL)) {
             ps.setString(1, expense.getName());
             ps.setDate(2, java.sql.Date.valueOf(expense.getCreated_at()));
-            ps.setBigDecimal(3, expense.getAmount());
+            ps.setInt(3, expense.getCategoryInt());
+            ps.setBigDecimal(4, expense.getAmount());
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return expense.withId(rs.getInt(1));
@@ -154,7 +215,7 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
     }
 
     @Override
-    public void remove(int id) {
+    public Expense remove(int id, Expense expense) {
         try (Connection con = dataSource.getConnection();
              PreparedStatement ps = con.prepareStatement(DELETE_EXPENSE_BY_ID)) {
             ps.setInt(1, id);
@@ -162,7 +223,11 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
             if (affectedRows == 0) {
                 throw new SQLException("Creating user failed, no rows affected.");
             }
-            con.commit();
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return expense.withId(rs.getInt(1));
+            }
+            return null;
         } catch (SQLException e) {
             log.error(e.getMessage());
             throw new DatabaseException(e);

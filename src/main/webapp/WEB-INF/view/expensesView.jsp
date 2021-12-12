@@ -32,7 +32,7 @@ pageEncoding="UTF-8"%>
             <td>"${ex.id}"</td>
             <td>"${ex.name}"</td>
             <td>"${ex.created_at}"</td>
-            <td><c:out value="${empty ex.category ? '---' : ex.category.name}"/></td>
+            <td>"${ex.categoryInt}"</td>
             <td>"${ex.amount}"</td>
         </tr>
     </c:forEach>

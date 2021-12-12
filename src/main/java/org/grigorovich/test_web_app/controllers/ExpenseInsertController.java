@@ -27,8 +27,9 @@ public class ExpenseInsertController extends HttpServlet {
         try {
             String name = (String) request.getParameter("name");
             LocalDate created_at = LocalDate.parse(request.getParameter("created_at"));
+            Integer categoryInt = Integer.parseInt(request.getParameter("category"));
             BigDecimal amount = new BigDecimal(request.getParameter("amount"));
-            Expense expense = new Expense(name, created_at, amount);
+            Expense expense = new Expense(name, created_at, categoryInt, amount);
             repository.insert(expense);
             response.sendRedirect(request.getContextPath() + "/expenses");
         } catch (Exception ex) {

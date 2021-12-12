@@ -11,8 +11,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-@WebServlet("/api/employees")
-    public class EmployeeJsonController extends CommonJsonController {
+@WebServlet("/api/expenses")
+    public class ExpenseJsonController extends CommonJsonController {
         private static final String ID = "id";
         private ExpenseRepository repository = RepositoryFactory.getExpenseRepository();
 
@@ -40,7 +40,8 @@ import java.io.IOException;
         @Override
         protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
             Expense expense = toEntity(Expense.class, req);
-            writeEntityToBody(repository.remove(expense), resp);
+            String id = req.getParameter(ID);
+            writeEntityToBody(repository.remove(Integer.parseInt(id), expense), resp);
         }
     }
 

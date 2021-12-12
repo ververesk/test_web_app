@@ -24,6 +24,10 @@
             <td><input type="date" name="created_at" value="${expense.created_at}" /></td>
         </tr>
         <tr>
+            <td>Category</td>
+            <td><input type="text" name="category" value="${expense.categoryInt}" /></td>
+        </tr>
+        <tr>
             <td>Amount</td>
             <td><input type="text" name="amount" value="${expense.amount}" /></td>
         </tr>
