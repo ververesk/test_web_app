@@ -41,6 +41,8 @@ pageEncoding="UTF-8"%>
 <br>
 <br>
 <a href="totalExpenses" >Total Expenses</a>
-
+<br>
+<br>
+<a href="HSC" >Highest Spending Category</a>
 </body>
 </html>
