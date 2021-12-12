@@ -32,3 +32,4 @@ target
 target/*
 target/**
 /src/main/java/org/grigorovich/test_web_app/Runner.java
+/наполнение таблиц test.sql
