@@ -40,6 +40,7 @@ pageEncoding="UTF-8"%>
 <a href="createExpense" >Create Expense</a>
 <br>
 <br>
+<a href="totalExpenses" >Total Expenses</a>
 
 </body>
 </html>
