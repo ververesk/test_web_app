@@ -23,7 +23,8 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
             "select e.id id, e.name name, e.created_at created_at, e.category category, e.amount amount from expense e";
     private static final String SELECT_FROM_EXPENSE_AND_CATEGORY =
             "select e.id e_id, e.name e_name, created_at, c.id c_id, c.name c_name, amount " +
-                    "from expense e join category c on e.category = c.id where c.name = ?";
+                    "from expense e join category c on e.category = c.id where c.name = ? " +
+                    "and (e.created_at between ? and ?);";
     private static final String ONE_ENTITY_FILTER = " where e.id = ?";
     private static final String FIND_EXPENSE_BY_ID = SELECT_FROM_EXPENSE + ONE_ENTITY_FILTER;
     private static final String DELETE_EXPENSE_BY_ID = "delete from expense e" + ONE_ENTITY_FILTER;
@@ -76,7 +77,7 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 highestSpendingCategory.put((
-                        rs.getString("name")),
+                                rs.getString("name")),
                         rs.getBigDecimal("amount")
                 );
             }
@@ -87,193 +88,170 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
         return highestSpendingCategory;
     }
 
-        @Override
-        public List<Expense> findAllExpenseJoinCategory (String category) {
-            ResultSet rs=null;
-            List<Expense> result;
-            try (Connection con = dataSource.getConnection();
-                 PreparedStatement ps = con.prepareStatement(SELECT_FROM_EXPENSE_AND_CATEGORY)) {
-                ps.setString(1, category);
-                rs=ps.executeQuery();
-                result = resultSetToExpensesJoinCategory(rs);
-            } catch (SQLException e) {
-                log.error(e.getMessage());
-                throw new DatabaseException(e);
-            } finally {
-                closeQuietly(rs);
-            }
-            return result;
+    @Override
+    public List<Expense> findAllExpenseJoinCategory(String category, LocalDate startDate, LocalDate finishDate) {
+        ResultSet rs = null;
+        List<Expense> result;
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement ps = con.prepareStatement(SELECT_FROM_EXPENSE_AND_CATEGORY)) {
+            ps.setString(1, category);
+            ps.setDate(2, java.sql.Date.valueOf(startDate));
+            ps.setDate(3, java.sql.Date.valueOf(finishDate));
+            rs = ps.executeQuery();
+            result = resultSetToExpensesJoinCategory(rs);
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+            throw new DatabaseException(e);
+        } finally {
+            closeQuietly(rs);
         }
+        return result;
+    }
 
-        @Override
-        public List<Expense> findAll () {
-            List<Expense> expenseList = new ArrayList<>();
-            try (Connection con = dataSource.getConnection();
-                 PreparedStatement ps = con.prepareStatement(SELECT_FROM_EXPENSE);
-                 ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    int id = rs.getInt("id");
-                    String name = rs.getString("name");
-                    LocalDate created_at = rs.getDate("created_at").toLocalDate();
-                    Integer categoryInt = rs.getInt("category");
-                    BigDecimal amount = rs.getBigDecimal("amount");
-                    Expense expense = new Expense();
-                    expense.withId(id);
-                    expense.withName(name);
-                    expense.withCreated_at(created_at);
-                    expense.withCategoryInt(categoryInt);
-                    expense.withAmount(amount);
-                    expenseList.add(expense);
-                }
-            } catch (SQLException e) {
-                log.error(e.getMessage());
-                throw new DatabaseException(e);
-            }
-            return expenseList;
-        }
-
-
-        private List<Expense> resultSetToExpensesJoinCategory (ResultSet rs) throws SQLException {
-            Map<Integer, Expense> expenseMap = new ConcurrentHashMap<>();
-            Map<Integer, Category> categoryMap = new ConcurrentHashMap<>();
+    @Override
+    public List<Expense> findAll() {
+        List<Expense> expenseList = new ArrayList<>();
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement ps = con.prepareStatement(SELECT_FROM_EXPENSE);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                int eId = rs.getInt("e_id");
-                int cId = rs.getInt("c_id");
-
-                categoryMap.putIfAbsent(cId, new Category()
-                        .withId(cId)
-                        .withName(rs.getString("c_name")));
-
-                expenseMap.putIfAbsent(eId,
-                        new Expense()
-                                .withId(eId)
-                                .withName(rs.getString("e_name"))
-                                .withCreated_at(rs.getDate("created_at").toLocalDate())
-                                .withCategory(categoryMap.get(cId))
-                                .withAmount(rs.getBigDecimal("amount")));
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+                LocalDate created_at = rs.getDate("created_at").toLocalDate();
+                Integer categoryInt = rs.getInt("category");
+                BigDecimal amount = rs.getBigDecimal("amount");
+                Expense expense = new Expense();
+                expense.withId(id);
+                expense.withName(name);
+                expense.withCreated_at(created_at);
+                expense.withCategoryInt(categoryInt);
+                expense.withAmount(amount);
+                expenseList.add(expense);
             }
-            Collection<Expense> values = expenseMap.values();
-            return values.isEmpty() ? new ArrayList<>() : new ArrayList<>(values);
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+            throw new DatabaseException(e);
         }
+        return expenseList;
+    }
 
-//    private static <K, V> V putIfAbsentAndReturn(Map<K, V> map, K key, V value) {
-//        if (key == null) {
-//            return null;
-//        }
-//        map.putIfAbsent(key, value);
-//        return map.get(key);
-//    }
 
-//    @Override
-//    public Expense find(int id) {
-//        List<Expense> result;
-//        ResultSet rs = null;
-//        try (Connection con = dataSource.getConnection();
-//             PreparedStatement ps = con.prepareStatement(FIND_EXPENSE_BY_ID)) {
-//            ps.setInt(1, id);
-//            rs = ps.executeQuery();
-//            result = resultSetToExpenses(rs);
-//        } catch (SQLException e) {
-//            log.error(e.getMessage());
-//            throw new DatabaseException(e);
-//        } finally {
-//            closeQuietly(rs);
-//        }
-//        return result.get(0);
-//    }
+    private List<Expense> resultSetToExpensesJoinCategory(ResultSet rs) throws SQLException {
+        Map<Integer, Expense> expenseMap = new ConcurrentHashMap<>();
+        Map<Integer, Category> categoryMap = new ConcurrentHashMap<>();
+        while (rs.next()) {
+            int eId = rs.getInt("e_id");
+            int cId = rs.getInt("c_id");
 
-        @Override
-        public Expense find (int id){
-            ResultSet rs = null;
-            try (Connection con = dataSource.getConnection();
-                 PreparedStatement ps = con.prepareStatement(FIND_EXPENSE_BY_ID)) {
-                ps.setInt(1, id);
-                rs = ps.executeQuery();
-                while (rs.next()) {
-                    int eId = rs.getInt("id");
-                    String name = rs.getString("name");
-                    LocalDate created_at = rs.getDate("created_at").toLocalDate();
-                    Integer categoryInt = rs.getInt("category");
-                    BigDecimal amount = rs.getBigDecimal("amount");
-                    Expense expense = new Expense(eId, name, created_at, categoryInt, amount);
-                    return expense;
-                }
-            } catch (SQLException e) {
-                log.error(e.getMessage());
+            categoryMap.putIfAbsent(cId, new Category()
+                    .withId(cId)
+                    .withName(rs.getString("c_name")));
 
-                throw new DatabaseException(e);
-            } finally {
-                closeQuietly(rs);
-            }
-            return null;
+            expenseMap.putIfAbsent(eId,
+                    new Expense()
+                            .withId(eId)
+                            .withName(rs.getString("e_name"))
+                            .withCreated_at(rs.getDate("created_at").toLocalDate())
+                            .withCategory(categoryMap.get(cId))
+                            .withAmount(rs.getBigDecimal("amount")));
         }
+        Collection<Expense> values = expenseMap.values();
+        return values.isEmpty() ? new ArrayList<>() : new ArrayList<>(values);
+    }
 
 
-        private static void closeQuietly (AutoCloseable closeable){
-            if (closeable == null) {
-                return;
+    @Override
+    public Expense find(int id) {
+        ResultSet rs = null;
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement ps = con.prepareStatement(FIND_EXPENSE_BY_ID)) {
+            ps.setInt(1, id);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                int eId = rs.getInt("id");
+                String name = rs.getString("name");
+                LocalDate created_at = rs.getDate("created_at").toLocalDate();
+                Integer categoryInt = rs.getInt("category");
+                BigDecimal amount = rs.getBigDecimal("amount");
+                Expense expense = new Expense(eId, name, created_at, categoryInt, amount);
+                return expense;
             }
-            try {
-                closeable.close();
-            } catch (Exception e) {
-                log.error("Couldn't close {}", closeable);
-            }
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+
+            throw new DatabaseException(e);
+        } finally {
+            closeQuietly(rs);
         }
+        return null;
+    }
 
-        @Override
-        public Expense update (Expense expense){
-            try (Connection con = dataSource.getConnection();
-                 PreparedStatement ps = con.prepareStatement(UPDATE_EXPENSE_SQL)) {
-                ps.setString(1, expense.getName());
-                ps.setDate(2, java.sql.Date.valueOf(expense.getCreated_at()));
-                ps.setBigDecimal(3, expense.getAmount());
-                ps.setInt(4, expense.getId());
-                if (ps.executeUpdate() > 0) {
-                    return expense;
-                }
-                return null;
-            } catch (SQLException e) {
-                log.error(e.getMessage());
-                throw new DatabaseException(e);
-            }
+
+    private static void closeQuietly(AutoCloseable closeable) {
+        if (closeable == null) {
+            return;
         }
-
-        @Override
-        public Expense insert (Expense expense){
-            try (Connection con = dataSource.getConnection();
-                 PreparedStatement ps = con.prepareStatement(INSERT_EXPENSE_SQL)) {
-                ps.setString(1, expense.getName());
-                ps.setDate(2, java.sql.Date.valueOf(expense.getCreated_at()));
-                ps.setInt(3, expense.getCategoryInt());
-                ps.setBigDecimal(4, expense.getAmount());
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    return expense.withId(rs.getInt(1));
-                }
-                return null;
-            } catch (SQLException e) {
-                log.error(e.getMessage());
-                throw new DatabaseException(e);
-            }
-        }
-
-        @Override
-        public Expense remove ( int id, Expense expense){
-            try (Connection con = dataSource.getConnection();
-                 PreparedStatement ps = con.prepareStatement(DELETE_EXPENSE_BY_ID)) {
-                ps.setInt(1, id);
-                int affectedRows = ps.executeUpdate();
-                if (affectedRows == 0) {
-                    throw new SQLException("Creating user failed, no rows affected.");
-                }
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    return expense.withId(rs.getInt(1));
-                }
-                return null;
-            } catch (SQLException e) {
-                log.error(e.getMessage());
-                throw new DatabaseException(e);
-            }
+        try {
+            closeable.close();
+        } catch (Exception e) {
+            log.error("Couldn't close {}", closeable);
         }
     }
+
+    @Override
+    public Expense update(Expense expense) {
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement ps = con.prepareStatement(UPDATE_EXPENSE_SQL)) {
+            ps.setString(1, expense.getName());
+            ps.setDate(2, java.sql.Date.valueOf(expense.getCreated_at()));
+            ps.setBigDecimal(3, expense.getAmount());
+            ps.setInt(4, expense.getId());
+            if (ps.executeUpdate() > 0) {
+                return expense;
+            }
+            return null;
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+            throw new DatabaseException(e);
+        }
+    }
+
+    @Override
+    public Expense insert(Expense expense) {
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement ps = con.prepareStatement(INSERT_EXPENSE_SQL)) {
+            ps.setString(1, expense.getName());
+            ps.setDate(2, java.sql.Date.valueOf(expense.getCreated_at()));
+            ps.setInt(3, expense.getCategoryInt());
+            ps.setBigDecimal(4, expense.getAmount());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return expense.withId(rs.getInt(1));
+            }
+            return null;
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+            throw new DatabaseException(e);
+        }
+    }
+
+    @Override
+    public Expense remove(int id, Expense expense) {
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement ps = con.prepareStatement(DELETE_EXPENSE_BY_ID)) {
+            ps.setInt(1, id);
+            int affectedRows = ps.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Creating user failed, no rows affected.");
+            }
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return expense.withId(rs.getInt(1));
+            }
+            return null;
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+            throw new DatabaseException(e);
+        }
+    }
+}

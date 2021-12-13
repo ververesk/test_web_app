@@ -57,6 +57,10 @@ pageEncoding="UTF-8"%>
     <option>travel</option>
 </select>
     <br><br>
+    Please choose start date<input type="date" name="start_date" value="1980-01-01"/>
+    <br><br>
+    Please choose finish date<input type="date" name="finish_date" value="2100-01-01"/>
+    <br><br>
     <input type="submit" value="Submit" />
 </form>
 </body>

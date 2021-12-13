@@ -22,8 +22,9 @@ public class QueryCriteriaProcessorController extends HttpServlet {
             throws ServletException, IOException {
         try {
             String category = (String) request.getParameter("category");
-            System.out.println(category);
-            List<Expense> expenseList= repository.findAllExpenseJoinCategory(category);
+            LocalDate startDate = LocalDate.parse(request.getParameter("start_date"));
+            LocalDate finishDate = LocalDate.parse(request.getParameter("finish_date"));
+            List<Expense> expenseList= repository.findAllExpenseJoinCategory(category, startDate, finishDate);
             request.setAttribute("expenseList", expenseList);
             getServletContext().getRequestDispatcher("/WEB-INF/view/queryCriteriaProcessorView.jsp").forward(request, response);
         } catch (Exception ex) {
