@@ -1,6 +1,7 @@
 package org.grigorovich.test_web_app.repository;
 
 import lombok.extern.slf4j.Slf4j;
+
 import org.grigorovich.test_web_app.exception.DatabaseException;
 import org.grigorovich.test_web_app.model.Category;
 import org.grigorovich.test_web_app.model.Expense;
@@ -22,7 +23,7 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
             "select e.id id, e.name name, e.created_at created_at, e.category category, e.amount amount from expense e";
     private static final String SELECT_FROM_EXPENSE_AND_CATEGORY =
             "select e.id e_id, e.name e_name, created_at, c.id c_id, c.name c_name, amount " +
-                    "from expense e join category c on e.category = c.id where c.name='education'";
+                    "from expense e join category c on e.category = c.id where c.name = ?";
     private static final String ONE_ENTITY_FILTER = " where e.id = ?";
     private static final String FIND_EXPENSE_BY_ID = SELECT_FROM_EXPENSE + ONE_ENTITY_FILTER;
     private static final String DELETE_EXPENSE_BY_ID = "delete from expense e" + ONE_ENTITY_FILTER;
@@ -87,15 +88,19 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
     }
 
         @Override
-        public List<Expense> findAllExpenseJoinCategory () {
+        public List<Expense> findAllExpenseJoinCategory (String category) {
+            ResultSet rs=null;
             List<Expense> result;
             try (Connection con = dataSource.getConnection();
-                 PreparedStatement ps = con.prepareStatement(SELECT_FROM_EXPENSE_AND_CATEGORY);
-                 ResultSet rs = ps.executeQuery()) {
+                 PreparedStatement ps = con.prepareStatement(SELECT_FROM_EXPENSE_AND_CATEGORY)) {
+                ps.setString(1, category);
+                rs=ps.executeQuery();
                 result = resultSetToExpensesJoinCategory(rs);
             } catch (SQLException e) {
                 log.error(e.getMessage());
                 throw new DatabaseException(e);
+            } finally {
+                closeQuietly(rs);
             }
             return result;
         }
@@ -178,7 +183,7 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
 //    }
 
         @Override
-        public Expense find ( int id){
+        public Expense find (int id){
             ResultSet rs = null;
             try (Connection con = dataSource.getConnection();
                  PreparedStatement ps = con.prepareStatement(FIND_EXPENSE_BY_ID)) {

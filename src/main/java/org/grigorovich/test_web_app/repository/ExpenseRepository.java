@@ -9,5 +9,5 @@ import java.util.Map;
 public interface ExpenseRepository extends Repository<Expense>{
     BigDecimal totalExpenses();
     Map<String, BigDecimal> highestSpendingCategory();
-    List<Expense> findAllExpenseJoinCategory();
+    List<Expense> findAllExpenseJoinCategory(String category);
 }

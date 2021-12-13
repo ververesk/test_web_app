@@ -44,5 +44,20 @@ pageEncoding="UTF-8"%>
 <br>
 <br>
 <a href="HSC" >Highest Spending Category</a>
+<br>
+<br>
+<form action="${pageContext.request.contextPath}/queryCriteria" method="POST">
+    Please select a category: <select name="category">
+    <option>food</option>
+    <option>clothes</option>
+    <option>utilities payments</option>
+    <option>entertainment</option>
+    <option>communal payments</option>
+    <option>education</option>
+    <option>travel</option>
+</select>
+    <br><br>
+    <input type="submit" value="Submit" />
+</form>
 </body>
 </html>
