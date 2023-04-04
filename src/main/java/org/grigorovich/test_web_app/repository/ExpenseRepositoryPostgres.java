@@ -244,11 +244,11 @@ public class ExpenseRepositoryPostgres implements ExpenseRepository {
             if (affectedRows == 0) {
                 throw new SQLException("Creating user failed, no rows affected.");
             }
-            ResultSet rs = ps.executeQuery();
+          /*  ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return expense.withId(rs.getInt(1));
-            }
-            return null;
+            }*/
+            return expense;
         } catch (SQLException e) {
             log.error(e.getMessage());
             throw new DatabaseException(e);

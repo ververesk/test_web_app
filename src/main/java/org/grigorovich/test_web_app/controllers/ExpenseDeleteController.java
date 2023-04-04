@@ -14,27 +14,26 @@ import java.io.IOException;
 @WebServlet("/deleteExpense")
 public class ExpenseDeleteController extends HttpServlet {
 
-        private final ExpenseRepository repository = RepositoryFactory.getExpenseRepository();
+    private final ExpenseRepository repository = RepositoryFactory.getExpenseRepository();
 
-        protected void doGet(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-            try {
-                int id = Integer.parseInt(request.getParameter("id"));
-                Expense expense = repository.find(id);
-                repository.remove(id, expense); //
-                response.sendRedirect(request.getContextPath() + "/expenses");
-                /*
-                выбрасывает на страницу notfound но все удаляет
-                 */
-            } catch (Exception ex) {
-                getServletContext().getRequestDispatcher("/WEB-INF/view/notfound.jsp").forward(request, response);
-            }
-        }
-        @Override
-        protected void doPost(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            doGet(request, response);
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            Expense expense = repository.find(id);
+            repository.remove(id, expense); //
+            response.sendRedirect(request.getContextPath() + "/expenses");
+        } catch (Exception ex) {
+            getServletContext().getRequestDispatcher("/WEB-INF/view/notfound.jsp").forward(request, response);
         }
     }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        doPost(request, response);
+    }
+}
 

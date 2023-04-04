@@ -5,6 +5,19 @@
          id="WebApp_ID" version="3.1">
 
   <display-name>web_app</display-name>
+  <error-page>
+    <exception-type>java.lang.ArithmeticException</exception-type>
+    <location>/WEB-INF/view/error.jsp</location>
+  </error-page>
+
+  <!--      <servlet>-->
+  <!--        <servlet-name>HelloController</servlet-name>-->
+  <!--        <servlet-class>org.grigorovich.test_web_app.controllers.HelloController</servlet-class>-->
+  <!--      </servlet>-->
+  <!--      <servlet-mapping>-->
+  <!--        <servlet-name>HelloController</servlet-name>-->
+  <!--        <url-pattern>/hello</url-pattern>-->
+  <!--      </servlet-mapping>-->
 
 
 </web-app>

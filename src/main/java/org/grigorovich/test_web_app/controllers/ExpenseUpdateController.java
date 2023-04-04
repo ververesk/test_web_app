@@ -39,6 +39,7 @@ public class ExpenseUpdateController extends HttpServlet {
         BigDecimal amount = new BigDecimal(request.getParameter("amount"));
         Expense expense = new Expense(id, name, created_at, amount);
         repository.update(expense);
+        //getServletContext().getRequestDispatcher("/WEB-INF/view/expensesView.jsp").forward(request, response);
         response.sendRedirect(request.getContextPath() + "/expenses");
     }
 }

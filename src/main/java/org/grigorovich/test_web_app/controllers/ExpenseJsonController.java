@@ -39,9 +39,10 @@ import java.io.IOException;
 
         @Override
         protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-            Expense expense = toEntity(Expense.class, req);
             String id = req.getParameter(ID);
+            Expense expense = repository.find(Integer.parseInt(id));
             writeEntityToBody(repository.remove(Integer.parseInt(id), expense), resp);
         }
     }
+
 
